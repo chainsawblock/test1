@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase/client";
+import { getSupabaseClient } from "../../lib/supabase/client";
 
 export default function ProfilePage() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
+    const supabase = getSupabaseClient();
     supabase.auth.getUser().then(({ data }) => {
       if (!ignore) setEmail(data.user?.email ?? null);
     });
@@ -15,6 +16,7 @@ export default function ProfilePage() {
   }, []);
 
   const signOut = async () => {
+    const supabase = getSupabaseClient();
     await supabase.auth.signOut();
     window.location.href = "/auth";
   };
