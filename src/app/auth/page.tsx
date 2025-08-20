@@ -10,21 +10,27 @@ function GoogleIcon({ className = "" }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
       <path fill="#EA4335" d="M12 10v4h5.6A5.9 5.9 0 1 1 12 6.1a5.7 5.7 0 0 1 3.9 1.5l2.7-2.7A10 10 0 1 0 22 12c0-.7-.1-1.3-.2-2H12z"/>
       <path fill="#34A853" d="M3.5 14.1a6 6 0 0 0 8.5 4.4l-3.3-2.6a3.6 3.6 0 0 1-5.2-1.8z"/>
-      <path fill="#4A90E2" d="M12 22a9.9 9.9 0 0 0 7-2.7л-3.2-2.5A6 6 0 0 1 3.5 14л-3.2 2.5A10 10 0 0 0 12 22z" opacity=".2"/>
-      <path fill="#FBBC05" d="M6.9 8.1 3.7 5.6A10 10 0 0 0 2 12c0 1 .2 1.9.5 2.8л3.2-2.6a6 6 0 0 1 1.2-4.1z"/>
+      <path fill="#4A90E2" d="M12 22a9.9 9.9 0 0 0 7-2.7l-3.2-2.5A6 6 0 0 1 3.5 14l-3.2 2.5A10 10 0 0 0 12 22z" opacity=".2"/>
+      <path fill="#FBBC05" d="M6.9 8.1 3.7 5.6A10 10 0 0 0 2 12c0 1 .2 1.9.5 2.8l3.2-2.6a6 6 0 0 1 1.2-4.1z"/>
     </svg>
   );
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try { return JSON.stringify(err); } catch { return "Неизвестная ошибка"; }
 }
 
 export default function AuthPage() {
   const router = useRouter();
 
   const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [msg, setMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [oauthLoading, setOauthLoading] = useState<boolean>(false);
 
   // если уже залогинен — редиректим в профиль
   useEffect(() => {
@@ -58,8 +64,7 @@ export default function AuthPage() {
         setMsg("Регистрация успешна! Если требуется подтверждение — проверьте почту.");
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setMsg(message || "Ошибка авторизации");
+      setMsg(errorMessage(err) || "Ошибка авторизации");
     } finally {
       setLoading(false);
     }
@@ -72,16 +77,11 @@ export default function AuthPage() {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${origin}/auth/callback`,
-          queryParams: { prompt: "select_account" },
-        },
+        options: { redirectTo: `${origin}/auth/callback`, queryParams: { prompt: "select_account" } },
       });
       if (error) throw error;
-      // произойдет редирект к провайдеру
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setMsg(message || "Не удалось запустить OAuth");
+      setMsg(errorMessage(err) || "Не удалось запустить OAuth");
       setOauthLoading(false);
     }
   };

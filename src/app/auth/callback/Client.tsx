@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "../../../lib/supabase/client";
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try { return JSON.stringify(err); } catch { return "Неизвестная ошибка"; }
+}
 
 export default function AuthCallbackClient() {
   const router = useRouter();
-  const search = useSearchParams();
-
   const [stage, setStage] = useState<"loading" | "recovery" | "error">("loading");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState<string>("");
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,18 +21,18 @@ export default function AuthCallbackClient() {
       try {
         const supabase = getSupabaseClient();
 
-        // 1) OAuth/PKCE: ?code=...
-        const code = search.get("code");
+        // Читаем параметры из window.location (без useSearchParams)
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          const { error } = await supabase.auth.exchangeCodeForSession(url.toString());
           if (error) { setMsg(error.message); setStage("error"); return; }
           router.replace("/profile");
           return;
         }
 
-        // 2) Email links (confirm/recovery/magic): токены в hash
-        const hash = window.location.hash || "";
-        const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.substring(1) : hash);
+        const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
         const access_token = hashParams.get("access_token");
         const refresh_token = hashParams.get("refresh_token");
         const type = hashParams.get("type"); // "recovery" | "signup" | "magiclink"
@@ -45,13 +49,12 @@ export default function AuthCallbackClient() {
 
         setMsg("Не удалось обработать ссылку. Проверьте Redirect URL в настройках Supabase.");
         setStage("error");
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e);
-        setMsg(message || "Не удалось обработать ссылку");
+      } catch (err: unknown) {
+        setMsg(errorMessage(err) || "Не удалось обработать ссылку");
         setStage("error");
       }
     })();
-  }, [router, search]);
+  }, [router]);
 
   const updatePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -63,8 +66,7 @@ export default function AuthCallbackClient() {
       setMsg("Пароль обновлён. Входим…");
       router.replace("/profile");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setMsg(message || "Не удалось обновить пароль");
+      setMsg(errorMessage(err) || "Не удалось обновить пароль");
     }
   };
 
@@ -102,7 +104,7 @@ export default function AuthCallbackClient() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-6 shadow-sm backdrop-blur">
+      <div className="rounded-2xl border border-zinc-800/80 bg-зinc-900/70 p-6 shadow-sm backdrop-blur">
         <h1 className="mb-3 text-2xl font-semibold text-zinc-100">Ошибка</h1>
         <p className="text-zinc-300">{msg ?? "Не удалось обработать ссылку."}</p>
         <p className="mt-3 text-zinc-400">
