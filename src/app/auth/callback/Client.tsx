@@ -1,20 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "../../../lib/supabase/client";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getSupabaseClient } from '../../../lib/supabase/client';
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  try { return JSON.stringify(err); } catch { return "Неизвестная ошибка"; }
+  if (typeof err === 'string') return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'Неизвестная ошибка';
+  }
 }
 
 export default function AuthCallbackClient() {
   const router = useRouter();
-  const [stage, setStage] = useState<"loading" | "recovery" | "error">("loading");
-  const [password, setPassword] = useState<string>("");
+  const [stage, setStage] = useState<'loading' | 'recovery' | 'error'>('loading');
+  const [password, setPassword] = useState<string>('');
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,35 +27,51 @@ export default function AuthCallbackClient() {
 
         // Читаем параметры из window.location (без useSearchParams)
         const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
+        const code = url.searchParams.get('code');
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(url.toString());
-          if (error) { setMsg(error.message); setStage("error"); return; }
-          router.replace("/profile");
+          if (error) {
+            setMsg(error.message);
+            setStage('error');
+            return;
+          }
+          router.replace('/profile');
           return;
         }
 
-        const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
-        const access_token = hashParams.get("access_token");
-        const refresh_token = hashParams.get("refresh_token");
-        const type = hashParams.get("type"); // "recovery" | "signup" | "magiclink"
+        const hashParams = new URLSearchParams(
+          url.hash.startsWith('#') ? url.hash.slice(1) : url.hash,
+        );
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+        const type = hashParams.get('type'); // "recovery" | "signup" | "magiclink"
 
         if (access_token && refresh_token) {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-          if (error) { setMsg(error.message); setStage("error"); return; }
+          if (error) {
+            setMsg(error.message);
+            setStage('error');
+            return;
+          }
         }
 
-        if (type === "recovery") { setStage("recovery"); return; }
+        if (type === 'recovery') {
+          setStage('recovery');
+          return;
+        }
 
         const { data } = await supabase.auth.getSession();
-        if (data.session?.user) { router.replace("/profile"); return; }
+        if (data.session?.user) {
+          router.replace('/profile');
+          return;
+        }
 
-        setMsg("Не удалось обработать ссылку. Проверьте Redirect URL в настройках Supabase.");
-        setStage("error");
+        setMsg('Не удалось обработать ссылку. Проверьте Redirect URL в настройках Supabase.');
+        setStage('error');
       } catch (err: unknown) {
-        setMsg(errorMessage(err) || "Не удалось обработать ссылку");
-        setStage("error");
+        setMsg(errorMessage(err) || 'Не удалось обработать ссылку');
+        setStage('error');
       }
     })();
   }, [router]);
@@ -64,16 +83,17 @@ export default function AuthCallbackClient() {
       const supabase = getSupabaseClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      setMsg("Пароль обновлён. Входим…");
-      router.replace("/profile");
+      setMsg('Пароль обновлён. Входим…');
+      router.replace('/profile');
     } catch (err: unknown) {
-      setMsg(errorMessage(err) || "Не удалось обновить пароль");
+      setMsg(errorMessage(err) || 'Не удалось обновить пароль');
     }
   };
 
-  if (stage === "loading") return <div className="text-center text-zinc-400">Обработка ссылки…</div>;
+  if (stage === 'loading')
+    return <div className="text-center text-zinc-400">Обработка ссылки…</div>;
 
-  if (stage === "recovery") {
+  if (stage === 'recovery') {
     return (
       <div className="mx-auto max-w-md">
         <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-6 shadow-sm backdrop-blur">
@@ -107,7 +127,7 @@ export default function AuthCallbackClient() {
     <div className="mx-auto max-w-md">
       <div className="rounded-2xl border border-zinc-800/80 bg-зinc-900/70 p-6 shadow-sm backdrop-blur">
         <h1 className="mb-3 text-2xl font-semibold text-zinc-100">Ошибка</h1>
-        <p className="text-zinc-300">{msg ?? "Не удалось обработать ссылку."}</p>
+        <p className="text-zinc-300">{msg ?? 'Не удалось обработать ссылку.'}</p>
         <p className="mt-3 text-zinc-400">
           Вернуться на <a href="/auth">страницу входа</a>.
         </p>

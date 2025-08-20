@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Suspense } from "react";
-import AuthCallbackClient from "./Client";
 
-export const dynamic = "force-dynamic";
+import { Suspense } from 'react';
+import AuthCallbackClient from './Client';
+
+export const dynamic = 'force-dynamic';
 
 export default function Page() {
   return (

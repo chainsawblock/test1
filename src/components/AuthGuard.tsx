@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "../lib/supabase/client";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getSupabaseClient } from '../lib/supabase/client';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -14,12 +14,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const run = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!ignore && !data.session?.user) router.replace("/auth");
+      if (!ignore && !data.session?.user) router.replace('/auth');
       setChecking(false);
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session?.user) router.replace("/auth");
+      if (!session?.user) router.replace('/auth');
     });
 
     run();
