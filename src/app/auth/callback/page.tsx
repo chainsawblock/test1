@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../../../lib/supabase/client";
+import { getSupabaseClient } from "../../../lib/supabase/client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -15,6 +15,9 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     (async () => {
       try {
+        const supabase = getSupabaseClient();
+
+        // 1) OAuth/PKCE: ?code=...
         const code = search.get("code");
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
@@ -22,16 +25,19 @@ export default function AuthCallbackPage() {
           router.replace("/profile");
           return;
         }
+
+        // 2) Email links (confirm/recovery/magic): токены в hash
         const hash = window.location.hash || "";
         const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.substring(1) : hash);
         const access_token = hashParams.get("access_token");
         const refresh_token = hashParams.get("refresh_token");
-        const type = hashParams.get("type");
+        const type = hashParams.get("type"); // "recovery" | "signup" | "magiclink"
 
         if (access_token && refresh_token) {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           if (error) { setMsg(error.message); setStage("error"); return; }
         }
+
         if (type === "recovery") { setStage("recovery"); return; }
 
         const { data } = await supabase.auth.getSession();
@@ -51,6 +57,7 @@ export default function AuthCallbackPage() {
     e.preventDefault();
     setMsg(null);
     try {
+      const supabase = getSupabaseClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       setMsg("Пароль обновлён. Входим…");
@@ -72,7 +79,7 @@ export default function AuthCallbackPage() {
             <div>
               <label className="block text-sm text-zinc-400">Пароль</label>
               <input
-                className="mt-1 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-zinc-100 outline-none ring-offset-0 placeholder:text-zinc-500 focus:ring-2 focus:ring-zinc-600"
+                className="mt-1 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 focus:ring-zinc-600"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
