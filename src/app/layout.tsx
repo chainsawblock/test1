@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="sticky top-0 z-10 border-b border-zinc-800/80 bg-zinc-900/70 backdrop-blur">
           <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/" className="font-semibold text-zinc-200">Auth Demo</Link>
+            <Link href="/" className="font-semibold text-zinc-200">FullProof</Link>
             <div className="flex items-center gap-4 text-sm text-zinc-400">
               <Link href="/auth">Auth</Link>
               <Link href="/reset">Сброс</Link>

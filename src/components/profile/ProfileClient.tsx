@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { getSupabaseClient } from "../../lib/supabase/client";
 import RedeemInvite from "./RedeemInvite";
 
@@ -25,6 +26,7 @@ export default function ProfileClient() {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [showRedeem, setShowRedeem] = useState(false);
   const redirected = useRef(false);
 
   useEffect(() => {
@@ -58,6 +60,18 @@ export default function ProfileClient() {
     return () => { cancelled = true; };
   }, [router, supabase]);
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success("Вы вышли из профиля");
+      router.replace("/auth");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Не удалось выйти";
+      toast.error("Ошибка выхода", { description: msg });
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-xl">
@@ -75,10 +89,37 @@ export default function ProfileClient() {
 
   if (!userEmail) return null; // редирект уже запущен
 
+  const inviteApplied = Boolean(profile?.invite_code);
+
   return (
     <div className="mx-auto max-w-xl">
       <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/70 p-6 backdrop-blur card-elev">
-        <h1 className="mb-4 text-2xl font-semibold text-zinc-100">Профиль</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-zinc-100">Профиль</h1>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRedeem((v) => !v)}
+              disabled={inviteApplied}
+              title={inviteApplied ? "Код уже применён" : "Применить инвайт-код"}
+              className={`rounded-xl px-3 py-2 text-sm font-medium ${
+                inviteApplied
+                  ? "cursor-not-allowed border border-zinc-800 bg-zinc-950 text-zinc-500"
+                  : "bg-zinc-200 text-zinc-900 hover:bg-zinc-300"
+              }`}
+            >
+              {inviteApplied ? "Код применён" : showRedeem ? "Скрыть инвайт" : "Применить инвайт"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-900"
+            >
+              Выйти
+            </button>
+          </div>
+        </div>
 
         <dl className="space-y-3 text-zinc-200">
           <div className="flex justify-between gap-4">
@@ -109,13 +150,21 @@ export default function ProfileClient() {
           </div>
         </dl>
 
-        {!profile?.invite_code && (
-          <RedeemInvite onSuccess={() => {
-            router.refresh();
-            setProfile((p) => (p ? { ...p, invite_code: "applied" } : p));
-          }} />
+        {/* Форма ввода инвайта — по кнопке, и только если код ещё не применён */}
+        {showRedeem && !inviteApplied && (
+          <RedeemInvite
+            onSuccess={() => {
+              // после успешного погашения — схлопываем форму и обновляем данные
+              setShowRedeem(false);
+              router.refresh();
+              setProfile((p) => (p ? { ...p, invite_code: "applied" } : p));
+            }}
+          />
         )}
       </div>
     </div>
   );
 }
+
+// маркер, чтобы TS точно трактовал файл как модуль
+export const __isModule = true;

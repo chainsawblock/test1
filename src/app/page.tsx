@@ -5,7 +5,7 @@ import AuthForm from "../components/auth/AuthForm";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const supabase = await getServerSupabase();         // ⬅️ ждём
+  const supabase = await getServerSupabase();         //
   const { data } = await supabase.auth.getUser();
   if (data.user) redirect("/profile");
 

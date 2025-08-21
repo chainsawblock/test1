@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 import PasswordStrength from "./PasswordStrength";
 import { getSupabaseClient } from "../../lib/supabase/client";
 
@@ -69,7 +70,10 @@ export default function AuthForm() {
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
+
+  // показать/скрыть пароль(и)
   const [showPwd, setShowPwd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // если уже залогинен — редиректим в профиль
   useEffect(() => {
@@ -144,7 +148,7 @@ export default function AuthForm() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: meta }, // OTP код придёт на почту
+          options: { data: meta }, // OTP/подтверждение придёт на почту (зависит от настроек проекта)
         });
         if (error) throw error;
 
@@ -232,32 +236,34 @@ export default function AuthForm() {
 
           {/* 3) Пароль — общий (индикатор только при регистрации) */}
           <div>
-            <div className="flex items-center justify-between">
-              <label className="block text-sm text-zinc-400">Пароль</label>
+            <label className="block text-sm text-zinc-400">Пароль</label>
+            <div className="relative">
+              <input
+                className={`mt-1 w-full rounded-xl border px-4 py-2.5 pr-10 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                  errors.password
+                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
+                    : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                }`}
+                type={showPwd ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === "signup" ? "Минимум 8 символов" : "Ваш пароль"}
+                required
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                minLength={mode === "signup" ? 8 : undefined}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              />
               <button
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
-                className="text-xs text-zinc-400 hover:text-zinc-200"
+                className="absolute inset-y-0 right-3 inline-flex items-center justify-center text-zinc-400 hover:text-zinc-200"
+                aria-label={showPwd ? "Скрыть пароль" : "Показать пароль"}
+                title={showPwd ? "Скрыть пароль" : "Показать пароль"}
               >
-                {showPwd ? "Скрыть" : "Показать"}
+                {showPwd ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            <input
-              className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                errors.password
-                  ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                  : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
-              }`}
-              type={showPwd ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === "signup" ? "Минимум 8 символов" : "Ваш пароль"}
-              required
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? "password-error" : undefined}
-              minLength={mode === "signup" ? 8 : undefined}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            />
             {errors.password && (
               <p id="password-error" className="mt-1 text-sm text-red-400">{errors.password}</p>
             )}
@@ -270,22 +276,33 @@ export default function AuthForm() {
           {mode === "signup" && (
             <div>
               <label className="block text-sm text-zinc-400">Повторите пароль</label>
-              <input
-                className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                  errors.confirm
-                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                    : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
-                }`}
-                type={showPwd ? "text" : "password"}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Ещё раз пароль"
-                required
-                aria-invalid={Boolean(errors.confirm)}
-                aria-describedby={errors.confirm ? "confirm-error" : undefined}
-                minLength={8}
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  className={`mt-1 w-full rounded-xl border px-4 py-2.5 pr-10 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                    errors.confirm
+                      ? "border-red-500 bg-zinc-950 focus:ring-red-600"
+                      : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                  }`}
+                  type={showConfirm ? "text" : "password"}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Ещё раз пароль"
+                  required
+                  aria-invalid={Boolean(errors.confirm)}
+                  aria-describedby={errors.confirm ? "confirm-error" : undefined}
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute inset-y-0 right-3 inline-flex items-center justify-center text-zinc-400 hover:text-zinc-200"
+                  aria-label={showConfirm ? "Скрыть пароль" : "Показать пароль"}
+                  title={showConfirm ? "Скрыть пароль" : "Показать пароль"}
+                >
+                  {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               {errors.confirm && (
                 <p id="confirm-error" className="mt-1 text-sm text-red-400">{errors.confirm}</p>
               )}
@@ -341,9 +358,9 @@ export default function AuthForm() {
             <div>
               <label className="block text-sm text-zinc-400">Инвайт-код</label>
               <input
-                className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-зinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
                   errors.invite_code
-                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
+                    ? "border-red-500 bg-зинc-950 focus:ring-red-600"
                     : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
                 }`}
                 value={inviteCode}

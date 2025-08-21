@@ -23,14 +23,24 @@ export default function RedeemInvite({ onSuccess }: { onSuccess?: () => void }) 
     setLoading(true);
     try {
       const supabase = getSupabaseClient();
+
+      // Проверим, что есть сессия — иначе RPC вернёт "No authorization token..."
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
+        toast.error("Нужна авторизация", { description: "Войдите и повторите попытку." });
+        router.replace("/auth");
+        return;
+      }
+
       const { data, error } = await supabase.rpc("redeem_invite", { p_code: code.trim() });
       if (error) throw error;
+
       if (data?.ok) {
         const usd = (data.bonus_usd_cents / 100).toFixed(2);
         toast.success("Инвайт подтверждён", { description: `Начислено: $${usd}` });
         setCode("");
         onSuccess?.();
-        router.refresh(); // обновит SSR-данные профиля
+        router.refresh();
       } else {
         toast.error("Не удалось применить", { description: data?.message ?? "unknown_error" });
       }
