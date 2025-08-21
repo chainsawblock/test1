@@ -119,7 +119,7 @@ export default function AuthForm() {
         return;
       }
 
-      // ── РЕГИСТРАЦИЯ (верный формат signUp, без ts-expect-error) ─────────────
+      /* ── РЕГИСТРАЦИЯ → переадресация на страницу ввода 6-значного кода ───── */
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const meta = {
         username: username.trim(),
@@ -132,8 +132,8 @@ export default function AuthForm() {
         email,
         password,
         options: {
-          emailRedirectTo: `${origin}/auth/callback`,
-          data: meta, // попадёт в raw_user_meta_data; триггер создаст запись в public.profiles
+          emailRedirectTo: `${origin}/auth/callback`, // можно оставить; основной путь — OTP-код
+          data: meta,                                  // попадёт в raw_user_meta_data
         },
       });
 
@@ -145,9 +145,8 @@ export default function AuthForm() {
         throw error;
       }
 
-      toast.success("Регистрация успешна", {
-        description: "Если включено подтверждение почты — проверьте письмо.",
-      });
+      // После успешной регистрации отправляем на страницу ввода OTP-кода
+      router.replace(`/auth/verify?email=${encodeURIComponent(email)}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : typeof err === "string" ? err : "Ошибка авторизации";
       toast.error("Не удалось выполнить операцию", { description: message });
