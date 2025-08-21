@@ -73,10 +73,7 @@ export default function ProfileClient() {
     );
   }
 
-  if (!userEmail) {
-    // редирект уже запущен
-    return null;
-  }
+  if (!userEmail) return null; // редирект уже запущен
 
   return (
     <div className="mx-auto max-w-xl">
@@ -115,13 +112,10 @@ export default function ProfileClient() {
         {!profile?.invite_code && (
           <RedeemInvite onSuccess={() => {
             router.refresh();
-            setProfile((p) => p ? { ...p, invite_code: "applied" } : p);
+            setProfile((p) => (p ? { ...p, invite_code: "applied" } : p));
           }} />
         )}
       </div>
     </div>
   );
 }
-
-// маленький no-op экспорт, чтобы TS наверняка трактовал файл как модуль (на случай экзотических настроек)
-export const __isModule = true;

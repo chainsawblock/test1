@@ -4,11 +4,11 @@ import VerifySignup from "../../../components/auth/VerifySignup";
 export default function VerifyPage({
   searchParams,
 }: {
-  searchParams?: { email?: string };
+  searchParams?: { email?: string | string[] };
 }) {
-  const emailParam = searchParams?.email;
+  const raw = searchParams?.email;
   const email =
-    typeof emailParam === "string" ? emailParam : Array.isArray(emailParam) ? emailParam[0] ?? "" : "";
+    typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] ?? "" : "";
 
   return <VerifySignup defaultEmail={email} />;
 }

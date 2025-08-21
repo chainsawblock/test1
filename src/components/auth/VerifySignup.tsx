@@ -31,15 +31,25 @@ export default function VerifySignup({ defaultEmail = "" }: { defaultEmail?: str
     try {
       const supabase = getSupabaseClient();
 
-      // Подтверждаем e-mail по 6-значному коду
+      // ВАЖНО: подтверждаем регу именно type: "signup"
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: code,
-        type: "email",
+        type: "signup",
       });
       if (error) throw error;
 
-      // Пробуем применить инвайт-код из профиля (если есть)
+      // Явно получаем сессию
+      const { data: sess } = await supabase.auth.getSession();
+      const session = data?.session ?? sess.session;
+
+      if (!session) {
+        toast.success("Email подтверждён. Войдите с паролем.");
+        router.replace("/auth");
+        return;
+      }
+
+      // Пробуем применить инвайт со стороны БД
       try {
         const { data: redeem } = await supabase.rpc("redeem_invite_from_profile");
         if (redeem?.ok) {
@@ -48,18 +58,10 @@ export default function VerifySignup({ defaultEmail = "" }: { defaultEmail?: str
         } else if (redeem?.message && redeem.message !== "no_invite_code") {
           toast.error("Инвайт не применён", { description: redeem.message });
         }
-      } catch {
-        /* не мешаем входу */
-      }
+      } catch { /* не блокируем вход */ }
 
-      // Если есть сессия — отправляем в профиль
-      if (data?.session) {
-        toast.success("Email подтверждён");
-        router.replace("/profile");
-      } else {
-        toast.success("Email подтверждён. Войдите с паролем.");
-        router.replace("/auth");
-      }
+      toast.success("Email подтверждён");
+      router.replace("/profile");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Неверный или просроченный код";
       toast.error("Не удалось подтвердить", { description: msg });
