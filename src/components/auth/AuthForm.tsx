@@ -47,7 +47,6 @@ function checkPasswordRules(pw: string) {
   if (!/[a-z]/.test(pw)) errs.push("Нужна строчная буква");
   if (!/[A-Z]/.test(pw)) errs.push("Нужна заглавная буква");
   if (!/\d/.test(pw)) errs.push("Нужна цифра");
-  if (!/[^A-Za-z0-9]/.test(pw)) errs.push("Нужен спецсимвол");
   return { ok: errs.length === 0, errs };
 }
 
@@ -184,7 +183,7 @@ export default function AuthForm() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
-          {/* Email */}
+          {/* 1) Email — общий */}
           <div>
             <label className="block text-sm text-zinc-400">Email</label>
             <input
@@ -207,7 +206,31 @@ export default function AuthForm() {
             )}
           </div>
 
-          {/* Пароль */}
+          {/* 2) Логин — только регистрация */}
+          {mode === "signup" && (
+            <div>
+              <label className="block text-sm text-zinc-400">Логин</label>
+              <input
+                className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                  errors.username
+                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
+                    : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                }`}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="например: neo_1337"
+                required
+                aria-invalid={Boolean(errors.username)}
+                aria-describedby={errors.username ? "username-error" : undefined}
+                autoComplete="username"
+              />
+              {errors.username && (
+                <p id="username-error" className="mt-1 text-sm text-red-400">{errors.username}</p>
+              )}
+            </div>
+          )}
+
+          {/* 3) Пароль — общий (индикатор только при регистрации) */}
           <div>
             <div className="flex items-center justify-between">
               <label className="block text-sm text-zinc-400">Пароль</label>
@@ -238,123 +261,101 @@ export default function AuthForm() {
             {errors.password && (
               <p id="password-error" className="mt-1 text-sm text-red-400">{errors.password}</p>
             )}
-
-            {/* Индикатор сложности — показываем ТОЛЬКО в регистрации */}
             {mode === "signup" && (
               <PasswordStrength password={password} userInputs={[email, username]} />
             )}
           </div>
 
-          {/* Блок регистрации */}
+          {/* 4) Повтор пароля — только регистрация */}
           {mode === "signup" && (
-            <>
-              {/* Подтверждение пароля */}
-              <div>
-                <label className="block text-sm text-зинc-400">Повторите пароль</label>
+            <div>
+              <label className="block text-sm text-zinc-400">Повторите пароль</label>
+              <input
+                className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                  errors.confirm
+                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
+                    : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                }`}
+                type={showPwd ? "text" : "password"}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Ещё раз пароль"
+                required
+                aria-invalid={Boolean(errors.confirm)}
+                aria-describedby={errors.confirm ? "confirm-error" : undefined}
+                minLength={8}
+                autoComplete="new-password"
+              />
+              {errors.confirm && (
+                <p id="confirm-error" className="mt-1 text-sm text-red-400">{errors.confirm}</p>
+              )}
+            </div>
+          )}
+
+          {/* 5) Связь — только регистрация */}
+          {mode === "signup" && (
+            <div>
+              <label className="block text-sm text-zinc-400">Связь</label>
+              <div className="mt-1 grid grid-cols-3 gap-2">
+                <select
+                  className="col-span-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-zinc-100 outline-none focus:ring-2 focus:ring-zinc-600"
+                  value={contactType}
+                  onChange={(e) => setContactType(e.target.value as ContactType)}
+                >
+                  <option value="none">Не указывать</option>
+                  <option value="telegram">Telegram</option>
+                  <option value="jabber">Jabber</option>
+                  <option value="tox">TOX</option>
+                </select>
+
                 <input
-                  className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                    errors.confirm
+                  className={`col-span-2 rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                    errors.contact_value
                       ? "border-red-500 bg-zinc-950 focus:ring-red-600"
                       : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
                   }`}
-                  type={showPwd ? "text" : "password"}
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="Ещё раз пароль"
-                  required
-                  aria-invalid={Boolean(errors.confirm)}
-                  aria-describedby={errors.confirm ? "confirm-error" : undefined}
-                  minLength={8}
-                  autoComplete="new-password"
+                  value={contactValue}
+                  onChange={(e) => setContactValue(e.target.value)}
+                  placeholder={
+                    contactType === "telegram"
+                      ? "@username"
+                      : contactType === "jabber"
+                      ? "user@server"
+                      : contactType === "tox"
+                      ? "TOX ID"
+                      : "—"
+                  }
+                  disabled={contactType === "none"}
+                  aria-invalid={Boolean(errors.contact_value)}
+                  aria-describedby={errors.contact_value ? "contact-error" : undefined}
                 />
-                {errors.confirm && (
-                  <p id="confirm-error" className="mt-1 text-sm text-red-400">{errors.confirm}</p>
-                )}
               </div>
+              {errors.contact_value && (
+                <p id="contact-error" className="mt-1 text-sm text-red-400">{errors.contact_value}</p>
+              )}
+            </div>
+          )}
 
-              {/* Логин */}
-              <div>
-                <label className="block text-sm text-zinc-400">Логин</label>
-                <input
-                  className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                    errors.username
-                      ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                      : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
-                  }`}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="например: neo_1337"
-                  required
-                  aria-invalid={Boolean(errors.username)}
-                  aria-describedby={errors.username ? "username-error" : undefined}
-                />
-                {errors.username && (
-                  <p id="username-error" className="mt-1 text-sm text-red-400">{errors.username}</p>
-                )}
-              </div>
-
-              {/* Контакт */}
-              <div>
-                <label className="block text-sm text-zinc-400">Связь</label>
-                <div className="mt-1 grid grid-cols-3 gap-2">
-                  <select
-                    className="col-span-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-zinc-100 outline-none focus:ring-2 focus:ring-zinc-600"
-                    value={contactType}
-                    onChange={(e) => setContactType(e.target.value as ContactType)}
-                  >
-                    <option value="none">Не указывать</option>
-                    <option value="telegram">Telegram</option>
-                    <option value="jabber">Jabber</option>
-                    <option value="tox">TOX</option>
-                  </select>
-
-                  <input
-                    className={`col-span-2 rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                      errors.contact_value
-                        ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                        : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
-                    }`}
-                    value={contactValue}
-                    onChange={(e) => setContactValue(e.target.value)}
-                    placeholder={
-                      contactType === "telegram"
-                        ? "@username"
-                        : contactType === "jabber"
-                        ? "user@server"
-                        : contactType === "tox"
-                        ? "TOX ID"
-                        : "—"
-                    }
-                    disabled={contactType === "none"}
-                    aria-invalid={Boolean(errors.contact_value)}
-                    aria-describedby={errors.contact_value ? "contact-error" : undefined}
-                  />
-                </div>
-                {errors.contact_value && (
-                  <p id="contact-error" className="mt-1 text-sm text-red-400">{errors.contact_value}</p>
-                )}
-              </div>
-
-              {/* Инвайт-код */}
-              <div>
-                <label className="block text-sm text-zinc-400">Инвайт-код</label>
-                <input
-                  className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                    errors.invite_code
-                      ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                      : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
-                  }`}
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="например: VIP200 (необязательно)"
-                  aria-invalid={Boolean(errors.invite_code)}
-                  aria-describedby={errors.invite_code ? "invite-error" : undefined}
-                />
-                {errors.invite_code && (
-                  <p id="invite-error" className="mt-1 text-sm text-red-400">{errors.invite_code}</p>
-                )}
-              </div>
-            </>
+          {/* 6) Инвайт-код — только регистрация */}
+          {mode === "signup" && (
+            <div>
+              <label className="block text-sm text-zinc-400">Инвайт-код</label>
+              <input
+                className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
+                  errors.invite_code
+                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
+                    : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                }`}
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                placeholder="например: VIP200 (необязательно)"
+                aria-invalid={Boolean(errors.invite_code)}
+                aria-describedby={errors.invite_code ? "invite-error" : undefined}
+              />
+              {errors.invite_code && (
+                <p id="invite-error" className="mt-1 text-sm text-red-400">{errors.invite_code}</p>
+              )}
+            </div>
           )}
 
           {/* Submit */}
