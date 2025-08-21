@@ -91,6 +91,37 @@ export default function ProfileClient() {
 
           <div className="flex justify-between gap-4">
             <dt className="text-zinc-400">Логин</dt>
-            <
-::contentReference[oaicite:0]{index=0}
+            <dd className="font-medium">{profile?.username ?? "—"}</dd>
+          </div>
 
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-400">Связь</dt>
+            <dd className="font-medium">
+              {profile?.contact_type ? `${profile.contact_type}: ${profile.contact_value || "—"}` : "—"}
+            </dd>
+          </div>
+
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-400">Инвайт-код</dt>
+            <dd className="font-medium">{profile?.invite_code ?? "—"}</dd>
+          </div>
+
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-400">Бонус</dt>
+            <dd className="font-medium">{formatUSD(profile?.invite_bonus_usd_cents)}</dd>
+          </div>
+        </dl>
+
+        {!profile?.invite_code && (
+          <RedeemInvite onSuccess={() => {
+            router.refresh();
+            setProfile((p) => p ? { ...p, invite_code: "applied" } : p);
+          }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// маленький no-op экспорт, чтобы TS наверняка трактовал файл как модуль (на случай экзотических настроек)
+export const __isModule = true;
