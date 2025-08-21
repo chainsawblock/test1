@@ -1,6 +1,8 @@
 import React from "react";
 import VerifySignup from "../../../components/auth/VerifySignup";
 
+export const dynamic = "force-dynamic";
+
 export default function VerifyPage({
   searchParams,
 }: {

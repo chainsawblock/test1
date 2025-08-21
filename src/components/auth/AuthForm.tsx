@@ -312,7 +312,7 @@ export default function AuthForm() {
           {/* 5) Связь — только регистрация */}
           {mode === "signup" && (
             <div>
-              <label className="block text-sm text-zinc-400">Связь</label>
+              <label className="block text-sm text-zinc-400">Контакты</label>
               <div className="mt-1 grid grid-cols-3 gap-2">
                 <select
                   className="col-span-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-zinc-100 outline-none focus:ring-2 focus:ring-zinc-600"
@@ -381,9 +381,9 @@ export default function AuthForm() {
                  disabled={loading}
                   className="inline-flex w-full items-center justify-center rounded-xl bg-zinc-200 px-4 py-2.5 font-medium text-zinc-900
              shadow-sm transition-shadow duration-200
-             hover:shadow-[0_0_24px_rgba(161,161,170,0.20)]
-             focus:shadow-[0_0_28px_rgba(161,161,170,0.25)]
-             disabled:opacity-60"
+             hover:shadow-[0_0_24px_rgba(161,161,170,0.12)]
+             focus:shadow-[0_0_28px_rgba(161,161,170,0.28)]
+             disabled:opacity-70"
                                 >
               {loading
               ? (mode === "login" ? "Входим…" : "Регистрируем…")
