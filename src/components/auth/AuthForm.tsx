@@ -376,20 +376,19 @@ export default function AuthForm() {
           )}
 
           {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex w-full items-center justify-center rounded-xl bg-zinc-200 px-4 py-2.5 font-medium text-zinc-900 shadow hover:bg-zinc-300 disabled:opacity-60"
-          >
-            {loading
-              ? mode === "login"
-                ? "Входим…"
-                : "Регистрируем…"
-              : mode === "login"
-              ? "Войти"
-              : "Зарегистрироваться"}
-          </button>
-
+           <button
+               type="submit"
+                 disabled={loading}
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-zinc-200 px-4 py-2.5 font-medium text-zinc-900
+             shadow-sm transition-shadow duration-200
+             hover:shadow-[0_0_24px_rgba(161,161,170,0.20)]
+             focus:shadow-[0_0_28px_rgba(161,161,170,0.25)]
+             disabled:opacity-60"
+                                >
+              {loading
+              ? (mode === "login" ? "Входим…" : "Регистрируем…")
+              : (mode === "login" ? "Войти" : "Зарегистрироваться")}
+                </button>
           {/* Ссылка на сброс пароля */}
           <div className="text-center text-sm">
             <Link href="/reset" className="text-zinc-300 hover:text-white">
