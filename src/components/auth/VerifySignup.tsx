@@ -31,15 +31,28 @@ export default function VerifySignup({ defaultEmail = "" }: { defaultEmail?: str
     try {
       const supabase = getSupabaseClient();
 
-      // Подтверждение регистрации по email OTP (6-значный код)
+      // Подтверждаем e-mail по 6-значному коду
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: code,
         type: "email",
       });
-
       if (error) throw error;
 
+      // Пробуем применить инвайт-код из профиля (если есть)
+      try {
+        const { data: redeem } = await supabase.rpc("redeem_invite_from_profile");
+        if (redeem?.ok) {
+          const usd = (redeem.bonus_usd_cents / 100).toFixed(2);
+          toast.success("Инвайт подтверждён", { description: `Начислено: $${usd}` });
+        } else if (redeem?.message && redeem.message !== "no_invite_code") {
+          toast.error("Инвайт не применён", { description: redeem.message });
+        }
+      } catch {
+        /* не мешаем входу */
+      }
+
+      // Если есть сессия — отправляем в профиль
       if (data?.session) {
         toast.success("Email подтверждён");
         router.replace("/profile");
@@ -63,10 +76,7 @@ export default function VerifySignup({ defaultEmail = "" }: { defaultEmail?: str
     setResending(true);
     try {
       const supabase = getSupabaseClient();
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-      });
+      const { error } = await supabase.auth.resend({ type: "signup", email });
       if (error) throw error;
       toast.success("Код отправлен повторно");
     } catch (err) {
@@ -87,7 +97,6 @@ export default function VerifySignup({ defaultEmail = "" }: { defaultEmail?: str
         </p>
 
         <form onSubmit={onVerify} className="space-y-4" noValidate>
-          {/* Email */}
           <div>
             <label className="block text-sm text-zinc-400">Email</label>
             <input
@@ -100,7 +109,6 @@ export default function VerifySignup({ defaultEmail = "" }: { defaultEmail?: str
             />
           </div>
 
-          {/* Код из письма */}
           <div>
             <label className="block text-sm text-zinc-400">Код из письма</label>
             <input
