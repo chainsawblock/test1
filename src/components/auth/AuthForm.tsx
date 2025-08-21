@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase/client";
 
-// ── Схемы валидации ────────────────────────────────────────────────────────────
+/* ── Zod схемы ─────────────────────────────────────────────────────────────── */
 
 const loginSchema = z.object({
   email: z.string().min(1, "Введите email").email("Неверный email"),
@@ -21,10 +21,7 @@ const signupSchema = z
       .string()
       .min(3, "Логин от 3 символов")
       .max(20, "Логин до 20 символов")
-      .regex(
-        /^[A-Za-z][A-Za-z0-9_]{2,19}$/,
-        "Логин: латиница/цифры/нижнее подчёркивание, начинается с буквы"
-      ),
+      .regex(/^[A-Za-z][A-Za-z0-9_]{2,19}$/, "Логин: латиница/цифры/_, начинается с буквы"),
     password: z.string().min(6, "Минимум 6 символов"),
     password2: z.string().min(6, "Минимум 6 символов"),
     contactType: z.enum(["none", "telegram", "jabber", "tox"]),
@@ -33,42 +30,24 @@ const signupSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.password !== v.password2) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["password2"],
-        message: "Пароли не совпадают",
-      });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["password2"], message: "Пароли не совпадают" });
     }
-    if (v.contactType !== "none") {
-      const val = (v.contactValue ?? "").trim();
-      if (!val) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["contactValue"],
-          message: "Укажите контакт",
-        });
-      }
+    if (v.contactType !== "none" && !(v.contactValue ?? "").trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["contactValue"], message: "Укажите контакт" });
     }
   });
 
 type FieldErrors = Partial<
   Record<
-    | "email"
-    | "password"
-    | "password2"
-    | "username"
-    | "contactType"
-    | "contactValue"
-    | "inviteCode",
+    "email" | "password" | "password2" | "username" | "contactType" | "contactValue" | "inviteCode",
     string
   >
 >;
 
-// ── Компонент формы ────────────────────────────────────────────────────────────
+/* ── Компонент ─────────────────────────────────────────────────────────────── */
 
 export default function AuthForm() {
   const router = useRouter();
-
   const [mode, setMode] = useState<"login" | "signup">("login");
 
   // Общие поля
@@ -93,54 +72,39 @@ export default function AuthForm() {
       const { data } = await supabase.auth.getSession();
       if (!ignore && data.session?.user) router.replace("/profile");
     })();
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, [router]);
 
-  // Валидация перед submit
   const validate = () => {
     if (mode === "login") {
       const parsed = loginSchema.safeParse({ email, password });
-      if (parsed.success) {
-        setErrors({});
-        return true;
+      if (parsed.success) { setErrors({}); return true; }
+      const e: FieldErrors = {};
+      for (const i of parsed.error.issues) {
+        const k = i.path[0];
+        if (typeof k === "string") e[k as keyof FieldErrors] = i.message;
       }
-      const fieldErrs: FieldErrors = {};
-      for (const issue of parsed.error.issues) {
-        const k = issue.path[0];
-        if (typeof k === "string") fieldErrs[k as keyof FieldErrors] = issue.message;
-      }
-      setErrors(fieldErrs);
+      setErrors(e);
       toast.error("Ошибка валидации", { description: parsed.error.issues[0]?.message });
       return false;
     }
 
     const parsed = signupSchema.safeParse({
-      email,
-      username,
-      password,
-      password2,
-      contactType,
-      contactValue,
-      inviteCode,
+      email, username, password, password2, contactType, contactValue, inviteCode,
     });
-    if (parsed.success) {
-      setErrors({});
-      return true;
+    if (parsed.success) { setErrors({}); return true; }
+    const e: FieldErrors = {};
+    for (const i of parsed.error.issues) {
+      const k = i.path[0];
+      if (typeof k === "string") e[k as keyof FieldErrors] = i.message;
     }
-    const fieldErrs: FieldErrors = {};
-    for (const issue of parsed.error.issues) {
-      const k = issue.path[0];
-      if (typeof k === "string") fieldErrs[k as keyof FieldErrors] = issue.message;
-    }
-    setErrors(fieldErrs);
+    setErrors(e);
     toast.error("Ошибка валидации", { description: parsed.error.issues[0]?.message });
     return false;
   };
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
+    ev.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
@@ -155,7 +119,7 @@ export default function AuthForm() {
         return;
       }
 
-      // mode === "signup"
+      // ── РЕГИСТРАЦИЯ (верный формат signUp, без ts-expect-error) ─────────────
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const meta = {
         username: username.trim(),
@@ -169,13 +133,12 @@ export default function AuthForm() {
         password,
         options: {
           emailRedirectTo: `${origin}/auth/callback`,
-          data: meta, // ← эти поля поймает наш триггер и создаст запись в public.profiles
+          data: meta, // попадёт в raw_user_meta_data; триггер создаст запись в public.profiles
         },
       });
 
       if (error) {
         const msg = String(error.message || error);
-        // Если БД вернула ошибку уникальности по username — подскажем красиво
         if (/username|duplicate|unique/i.test(msg)) {
           setErrors((e) => ({ ...e, username: "Этот логин уже занят" }));
         }
@@ -183,19 +146,17 @@ export default function AuthForm() {
       }
 
       toast.success("Регистрация успешна", {
-        description:
-          "Если включено подтверждение почты — проверьте письмо и перейдите по ссылке.",
+        description: "Если включено подтверждение почты — проверьте письмо.",
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : typeof err === "string" ? err : "Ошибка авторизации";
+      const message = err instanceof Error ? err.message : typeof err === "string" ? err : "Ошибка авторизации";
       toast.error("Не удалось выполнить операцию", { description: message });
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Рендер ───────────────────────────────────────────────────────────────────
+  /* ── UI ───────────────────────────────────────────────────────────────────── */
 
   return (
     <div className="mx-auto max-w-md">
@@ -210,9 +171,7 @@ export default function AuthForm() {
             <label className="block text-sm text-zinc-400">Email</label>
             <input
               className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                errors.email
-                  ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                  : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                errors.email ? "border-red-500 bg-zinc-950 focus:ring-red-600" : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
               }`}
               type="email"
               value={email}
@@ -222,14 +181,10 @@ export default function AuthForm() {
               aria-invalid={Boolean(errors.email)}
               aria-describedby={errors.email ? "email-error" : undefined}
             />
-            {errors.email && (
-              <p id="email-error" className="mt-1 text-sm text-red-400">
-                {errors.email}
-              </p>
-            )}
+            {errors.email && <p id="email-error" className="mt-1 text-sm text-red-400">{errors.email}</p>}
           </div>
 
-          {/* Для регистрации показываем дополнительные поля */}
+          {/* Поля регистрации */}
           {mode === "signup" && (
             <>
               {/* Логин */}
@@ -237,9 +192,7 @@ export default function AuthForm() {
                 <label className="block text-sm text-zinc-400">Логин</label>
                 <input
                   className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                    errors.username
-                      ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                      : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                    errors.username ? "border-red-500 bg-zinc-950 focus:ring-red-600" : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
                   }`}
                   type="text"
                   value={username}
@@ -250,23 +203,17 @@ export default function AuthForm() {
                   aria-invalid={Boolean(errors.username)}
                   aria-describedby={errors.username ? "username-error" : undefined}
                 />
-                {errors.username && (
-                  <p id="username-error" className="mt-1 text-sm text-red-400">
-                    {errors.username}
-                  </p>
-                )}
+                {errors.username && <p id="username-error" className="mt-1 text-sm text-red-400">{errors.username}</p>}
               </div>
 
-              {/* Контакты: тип + значение (условно обязательно) */}
+              {/* Контакты */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm text-zinc-400">Связь</label>
                   <select
                     className="mt-1 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-zinc-100 outline-none focus:ring-2 focus:ring-zinc-600"
                     value={contactType}
-                    onChange={(e) =>
-                      setContactType(e.target.value as "none" | "telegram" | "jabber" | "tox")
-                    }
+                    onChange={(e) => setContactType(e.target.value as "none" | "telegram" | "jabber" | "tox")}
                   >
                     <option value="none">Не указывать</option>
                     <option value="telegram">Telegram</option>
@@ -287,9 +234,7 @@ export default function AuthForm() {
                   </label>
                   <input
                     className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                      errors.contactValue
-                        ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                        : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                      errors.contactValue ? "border-red-500 bg-zinc-950 focus:ring-red-600" : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
                     }`}
                     type="text"
                     value={contactValue}
@@ -306,22 +251,16 @@ export default function AuthForm() {
                     aria-invalid={Boolean(errors.contactValue)}
                     aria-describedby={errors.contactValue ? "contact-error" : undefined}
                   />
-                  {errors.contactValue && (
-                    <p id="contact-error" className="mt-1 text-sm text-red-400">
-                      {errors.contactValue}
-                    </p>
-                  )}
+                  {errors.contactValue && <p id="contact-error" className="mt-1 text-sm text-red-400">{errors.contactValue}</p>}
                 </div>
               </div>
 
-              {/* Инвайт-код (необязателен) */}
+              {/* Инвайт-код */}
               <div>
                 <label className="block text-sm text-zinc-400">Инвайт-код (опционально)</label>
                 <input
                   className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                    errors.inviteCode
-                      ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                      : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                    errors.inviteCode ? "border-red-500 bg-zinc-950 focus:ring-red-600" : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
                   }`}
                   type="text"
                   value={inviteCode}
@@ -330,11 +269,7 @@ export default function AuthForm() {
                   aria-invalid={Boolean(errors.inviteCode)}
                   aria-describedby={errors.inviteCode ? "invite-error" : undefined}
                 />
-                {errors.inviteCode && (
-                  <p id="invite-error" className="mt-1 text-sm text-red-400">
-                    {errors.inviteCode}
-                  </p>
-                )}
+                {errors.inviteCode && <p id="invite-error" className="mt-1 text-sm text-red-400">{errors.inviteCode}</p>}
               </div>
             </>
           )}
@@ -344,9 +279,7 @@ export default function AuthForm() {
             <label className="block text-sm text-zinc-400">Пароль</label>
             <input
               className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                errors.password
-                  ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                  : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                errors.password ? "border-red-500 bg-zinc-950 focus:ring-red-600" : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
               }`}
               type="password"
               value={password}
@@ -357,11 +290,7 @@ export default function AuthForm() {
               aria-invalid={Boolean(errors.password)}
               aria-describedby={errors.password ? "password-error" : undefined}
             />
-            {errors.password && (
-              <p id="password-error" className="mt-1 text-sm text-red-400">
-                {errors.password}
-              </p>
-            )}
+            {errors.password && <p id="password-error" className="mt-1 text-sm text-red-400">{errors.password}</p>}
           </div>
 
           {/* Повтор пароля — только при регистрации */}
@@ -370,9 +299,7 @@ export default function AuthForm() {
               <label className="block text-sm text-zinc-400">Повтор пароля</label>
               <input
                 className={`mt-1 w-full rounded-xl border px-4 py-2.5 text-zinc-100 outline-none placeholder:text-zinc-500 focus:ring-2 ${
-                  errors.password2
-                    ? "border-red-500 bg-zinc-950 focus:ring-red-600"
-                    : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
+                  errors.password2 ? "border-red-500 bg-zinc-950 focus:ring-red-600" : "border-zinc-800 bg-zinc-950 focus:ring-zinc-600"
                 }`}
                 type="password"
                 value={password2}
@@ -383,11 +310,7 @@ export default function AuthForm() {
                 aria-invalid={Boolean(errors.password2)}
                 aria-describedby={errors.password2 ? "password2-error" : undefined}
               />
-              {errors.password2 && (
-                <p id="password2-error" className="mt-1 text-sm text-red-400">
-                  {errors.password2}
-                </p>
-              )}
+              {errors.password2 && <p id="password2-error" className="mt-1 text-sm text-red-400">{errors.password2}</p>}
             </div>
           )}
 
@@ -403,19 +326,12 @@ export default function AuthForm() {
           <div className="pt-2 space-y-2">
             <button
               type="button"
-              onClick={() => {
-                setErrors({});
-                setMode((m) => (m === "login" ? "signup" : "login"));
-              }}
+              onClick={() => { setErrors({}); setMode((m) => (m === "login" ? "signup" : "login")); }}
               className="inline-flex w-full items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 font-medium text-zinc-200 hover:bg-zinc-900"
             >
-              {mode === "login"
-                ? "Нет аккаунта? Зарегистрироваться"
-                : "Уже есть аккаунт? Войти"}
+              {mode === "login" ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти"}
             </button>
-            <p className="text-center text-sm">
-              <Link href="/reset">Забыли пароль?</Link>
-            </p>
+            <p className="text-center text-sm"><Link href="/reset">Забыли пароль?</Link></p>
           </div>
         </form>
       </div>
