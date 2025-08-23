@@ -24,3 +24,46 @@ a {
 a:hover {
   text-decoration: underline;
 }
+:root{
+  /* фон приложения — тёмно-серый, почти чёрный */
+  --app-bg-from:#0b0b0c;
+  --app-bg-via:#101012;
+  --app-bg-to:#131316;
+
+  /* базовые цвета */
+  --text:#e7e7ea;
+  --muted:#a1a1a8;
+  --border:#242428;
+
+  /* поверхности и хедер */
+  --surface-1:#141416;   /* карточки/панели */
+  --surface-2:#18181b;   /* вторичные */
+  --header-bg:rgba(16,16,18,.9);
+  --header-border:#1e1e22;
+
+  /* инпуты */
+  --input-bg:#121214;
+  --input-border:#2a2a30;
+
+  /* бренд при желании */
+  --brand:#22c55e;
+}
+
+html{ color-scheme: dark; }
+
+body{
+  color: var(--text);
+  background-color: var(--app-bg-from);
+  /* мягкий тёмный градиент + слабая верхняя «подсветка» */
+  background-image:
+    radial-gradient(1000px 600px at 50% -200px, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(to bottom, var(--app-bg-from), var(--app-bg-via) 40%, var(--app-bg-to));
+  background-attachment: fixed;
+}
+
+/* полезные утилити-классы, если где-то нужно быстро подтянуть стиль */
+.card-dark{ background: var(--surface-1); border:1px solid var(--border); }
+.input-dark{
+  background:var(--input-bg); border:1px solid var(--input-border);
+  color:var(--text);
+}
