@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "../toast/ToastProvider";
+import { useToast } from "@/features/notifications/toast/ToastProvider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Row = {
