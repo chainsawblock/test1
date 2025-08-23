@@ -1,11 +1,11 @@
-// components/Header.tsx
+// src/components/layout/Header.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, User, Settings, LogOut } from "lucide-react";
 import clsx from "clsx";
- import { supabase } from "../lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client"; // если алиас не настроен: ../../lib/supabase/client
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 /** Кнопка-иконка без бэкграунда/подсветок */
@@ -40,26 +40,45 @@ export default function Header() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // первичная проверка
-    const init = async () => {
-      const { data } = await supabase.auth.getUser();
-      setIsAuthenticated(!!data.user);
-    };
-    init();
+    let unsubscribe: (() => void) | undefined;
 
-    // подписка на изменение сессии
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
-        setIsAuthenticated(!!session?.user);
+    (async () => {
+      try {
+        const supabase = getSupabaseClient();
+
+        // первичная проверка пользователя
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsAuthenticated(!!user);
+
+        // подписка на изменения сессии
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (_event: AuthChangeEvent, session: Session | null) => {
+            setIsAuthenticated(!!session?.user);
+          }
+        );
+        unsubscribe = () => subscription.unsubscribe();
+      } catch (err) {
+        // если нет ENV или иная проблема — не падать, просто считаем, что не авторизован
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Supabase init error:", (err as Error)?.message ?? err);
+        }
       }
-    );
+    })();
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      try { unsubscribe?.(); } catch {}
+    };
   }, []);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error("Logout error:", error.message);
+    try {
+      const supabase = getSupabaseClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Logout error:", (err as Error)?.message ?? err);
+      }
+    }
   };
 
   return (
@@ -83,9 +102,7 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Навигация полностью убрана */}
-
-          {/* Иконки справа: показ только после авторизации */}
+          {/* Навигацию убрали. Иконки — только после авторизации */}
           {isAuthenticated && (
             <div className="flex items-center gap-1">
               <IconButton label="Уведомления">
@@ -107,3 +124,4 @@ export default function Header() {
     </header>
   );
 }
+
