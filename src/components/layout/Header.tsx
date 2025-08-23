@@ -1,77 +1,103 @@
+// components/Header.tsx
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { LogOut, User } from "lucide-react";
-import { toast } from "sonner";
-import { getSupabaseClient } from "../../lib/supabase/client";
+import { usePathname } from "next/navigation";
+import { Bell, User, Settings } from "lucide-react";
+import clsx from "clsx";
 
-export default function Header({ siteName }: { siteName: string }) {
+const nav = [
+  { href: "/", label: "Главная" },
+  { href: "/dashboard", label: "Панель" },
+  { href: "/pricing", label: "Цены" },
+];
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   const pathname = usePathname();
-  const isProfile = pathname?.startsWith("/profile");
-  const router = useRouter();
-  const supabase = getSupabaseClient();
-
-  const onSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      router.replace("/auth");
-    } catch (e) {
-      toast.error("Не удалось выйти", {
-        description: e instanceof Error ? e.message : String(e),
-      });
-    }
-  };
-
+  const active = pathname === href;
   return (
-    <header className="border-b border-zinc-800/60 bg-zinc-950/70 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        {/* Лого/название слева */}
-        <Link
-          href="/"
-          className="font-semibold tracking-tight text-zinc-100 hover:text-white"
-        >
-          {siteName}
-        </Link>
+    <Link
+      href={href}
+      className={clsx(
+        "px-3 py-2 text-sm",
+        "text-[var(--header-muted)] hover:text-[var(--header-fg)]",
+        active && "text-[var(--header-fg)]"
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
 
-        {/* Правый блок */}
-        <div className="flex items-center gap-2">
-          {isProfile ? (
-            <>
-              {/* Иконка профиля (активная на /profile) */}
-              <Link
-                href="/profile"
-                aria-label="Профиль"
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border
-                  ${pathname === "/profile"
-                    ? "border-zinc-600 bg-zinc-900 text-zinc-100"
-                    : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white"
-                  }`}
-                title="Профиль"
-              >
-                <User size={18} />
-              </Link>
+function IconButton({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      aria-label={label}
+      title={label}
+      className={clsx(
+        // кликабельная зона есть, но визуально «голая» и без подсветок
+        "p-2 h-9 w-9 inline-flex items-center justify-center",
+        "bg-transparent rounded-none border-0 shadow-none",
+        "hover:bg-transparent active:bg-transparent",
+        "focus:outline-none focus-visible:outline-none focus-visible:ring-0",
+        "transition-none"
+      )}
+    >
+      {/* иконка без hover-изменений */}
+      <span className="inline-flex">
+        {children}
+      </span>
+    </button>
+  );
+}
 
-              {/* Иконка выхода */}
-              <button
-                type="button"
-                onClick={onSignOut}
-                aria-label="Выйти"
-                title="Выйти"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white hover:shadow-[0_0_18px_rgba(161,161,170,0.18)] focus:shadow-[0_0_18px_rgba(161,161,170,0.22)]"
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            // На остальных страницах можно оставить старое меню
-            <nav className="flex items-center gap-4 text-sm text-zinc-400">
-              <Link href="/auth" className="hover:text-zinc-200">Вход</Link>
-              <Link href="/reset" className="hover:text-zinc-200">Сброс</Link>
-              <Link href="/profile" className="hover:text-zinc-200">Профиль</Link>
-            </nav>
-          )}
+export default function Header() {
+  return (
+    <header
+      className={clsx(
+        "sticky top-0 z-50",
+        "bg-[var(--header-bg)] text-[var(--header-fg)]",
+        "border-b",
+        "border-[var(--header-border)]/80",
+        "backdrop-blur supports-[backdrop-filter]:bg-[color:var(--header-bg)]/95"
+      )}
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="h-14 flex items-center justify-between gap-3">
+          {/* Логотип/бренд */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="text-base font-semibold tracking-tight" style={{ color: "var(--brand)" }}>
+              FullProof
+            </div>
+          </Link>
+
+          {/* Навигация */}
+          <nav className="hidden md:flex items-center gap-1">
+            {nav.map((item) => (
+              <NavLink key={item.href} href={item.href}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Правые иконки — без боксов и подсветки */}
+          <div className="flex items-center gap-1">
+            <IconButton label="Уведомления">
+              <Bell size={18} style={{ color: "var(--header-fg)" }} />
+            </IconButton>
+            <IconButton label="Настройки">
+              <Settings size={18} style={{ color: "var(--header-fg)" }} />
+            </IconButton>
+            <IconButton label="Профиль">
+              <User size={18} style={{ color: "var(--header-fg)" }} />
+            </IconButton>
+          </div>
         </div>
       </div>
     </header>
