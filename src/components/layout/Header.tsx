@@ -3,9 +3,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut } from "lucide-react";
 import clsx from "clsx";
-import { getSupabaseClient } from "@/lib/supabase/client"; // если алиас не настроен: ../../lib/supabase/client
+
+// если есть алиас "@":
+import { getSupabaseClient } from "@/lib/supabase/client";
+// если алиаса нет, замени на относительный путь:
+// import { getSupabaseClient } from "../../lib/supabase/client";
+
+// импорт кнопки уведомлений (путь из layout → features)
+import { NotificationsButton } from "../../features/notifications/NotificationsButton";
+
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 /** Кнопка-иконка без бэкграунда/подсветок */
@@ -46,7 +54,7 @@ export default function Header() {
       try {
         const supabase = getSupabaseClient();
 
-        // первичная проверка пользователя
+        // первичная проверка
         const { data: { user } } = await supabase.auth.getUser();
         setIsAuthenticated(!!user);
 
@@ -57,10 +65,9 @@ export default function Header() {
           }
         );
         unsubscribe = () => subscription.unsubscribe();
-      } catch (err) {
-        // если нет ENV или иная проблема — не падать, просто считаем, что не авторизован
+      } catch (e) {
         if (process.env.NODE_ENV !== "production") {
-          console.error("Supabase init error:", (err as Error)?.message ?? err);
+          console.error("Supabase init error:", (e as Error)?.message ?? e);
         }
       }
     })();
@@ -74,9 +81,9 @@ export default function Header() {
     try {
       const supabase = getSupabaseClient();
       await supabase.auth.signOut();
-    } catch (err) {
+    } catch (e) {
       if (process.env.NODE_ENV !== "production") {
-        console.error("Logout error:", (err as Error)?.message ?? err);
+        console.error("Logout error:", (e as Error)?.message ?? e);
       }
     }
   };
@@ -102,12 +109,12 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Навигацию убрали. Иконки — только после авторизации */}
+          {/* Иконки справа — только после авторизации */}
           {isAuthenticated && (
             <div className="flex items-center gap-1">
-              <IconButton label="Уведомления">
-                <Bell size={18} />
-              </IconButton>
+              {/* Колокольчик с бейджем и дропдауном */}
+              <NotificationsButton />
+
               <IconButton label="Настройки">
                 <Settings size={18} />
               </IconButton>
