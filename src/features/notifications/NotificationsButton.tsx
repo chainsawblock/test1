@@ -1,3 +1,4 @@
+// src/features/notifications/NotificationsButton.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -6,13 +7,21 @@ import { Bell } from "lucide-react";
 import { useNotifications } from "./useNotifications";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { getSupabaseClient } from "@/lib/supabase/client"; // при отсутствии алиаса — замени на относительный путь
 
-export function NotificationsButton() {
+function NotificationsButton() {
   const { items, unread, loading, since, markAsRead, markAllAsRead } = useNotifications(20);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // лениво инициализируем supabase (только в браузере)
+  const supabaseRef = useRef<ReturnType<typeof getSupabaseClient> | null>(null);
+  useEffect(() => {
+    try { supabaseRef.current = getSupabaseClient(); } catch {}
+  }, []);
+
+  // клик вне — закрыть
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!ref.current) return;
@@ -22,18 +31,37 @@ export function NotificationsButton() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  // при открытии — отметить видимые как seen_at
+  async function toggleOpen() {
+    const next = !open;
+    setOpen(next);
+
+    if (next && supabaseRef.current) {
+      const unseenIds = items.filter((n) => !n.seen_at).map((n) => n.id);
+      if (unseenIds.length) {
+        try {
+          await supabaseRef.current
+            .from("notifications")
+            .update({ seen_at: new Date().toISOString() })
+            .in("id", unseenIds);
+        } catch {
+          // необязательно для UX — молчим
+        }
+      }
+    }
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
         aria-label="Уведомления"
         title="Уведомления"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         className={clsx(
           "p-2 h-9 w-9 inline-flex items-center justify-center",
           "bg-transparent rounded-none border-0 shadow-none",
           "focus:outline-none focus-visible:outline-none focus-visible:ring-0",
           "transition-colors duration-150",
-          // базовый цвет и hover
           "text-[#9e9e9e] hover:text-white/90 active:text-white"
         )}
       >
@@ -55,6 +83,7 @@ export function NotificationsButton() {
                      bg-[var(--surface-1)] text-[var(--text)]"
         >
           <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)]/60">
+            {/* заголовок ведёт на страницу всех уведомлений */}
             <Link
               href="/notifications"
               className="text-sm opacity-90 hover:opacity-100 hover:underline focus:outline-none focus-visible:underline"
@@ -62,6 +91,7 @@ export function NotificationsButton() {
             >
               Уведомления
             </Link>
+
             <button
               onClick={markAllAsRead}
               className="text-xs opacity-80 hover:opacity-100"
@@ -116,3 +146,7 @@ export function NotificationsButton() {
     </div>
   );
 }
+
+// Экспорт и как default, и как именованный:
+export { NotificationsButton };
+export default NotificationsButton;
