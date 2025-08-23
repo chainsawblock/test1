@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/features/notifications/toast/ToastProvider";
+import { useToast } from "../toast/ToastProvider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Row = {
@@ -11,24 +11,32 @@ type Row = {
 };
 
 export default function NotificationsToaster({ onlyHigh = true }: { onlyHigh?: boolean }) {
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabaseRef = useRef<ReturnType<typeof getSupabaseClient> | null>(null);
   const { show } = useToast();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
-  const mounted = useRef(true);
+
+  // лениво поднимаем клиент только в браузере
+  useEffect(() => {
+    try { supabaseRef.current = getSupabaseClient(); } catch {}
+  }, []);
 
   useEffect(() => {
-    mounted.current = true;
+    const supabase = supabaseRef.current;
+    if (!supabase) return;
+
+    let mounted = true;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!mounted.current) return;
-      setUserId(user?.id ?? null);
+      if (mounted) setUserId(user?.id ?? null);
     })();
-    return () => { mounted.current = false; };
-  }, [supabase]);
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    const supabase = supabaseRef.current;
+    if (!supabase || !userId) return;
+
     const channel = supabase
       .channel(`notifications_toast_${userId}`)
       .on("postgres_changes",
@@ -43,7 +51,6 @@ export default function NotificationsToaster({ onlyHigh = true }: { onlyHigh?: b
             kind: n.priority === "high" ? "warning" : "info",
             actionLabel: n.link ? "Открыть" : "Прочитано",
             onAction: async () => {
-              // пометить прочитанным
               await supabase.from("notifications")
                 .update({ read_at: new Date().toISOString() })
                 .eq("id", n.id).is("read_at", null);
@@ -56,7 +63,7 @@ export default function NotificationsToaster({ onlyHigh = true }: { onlyHigh?: b
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [userId, supabase, show, router, onlyHigh]);
+  }, [userId, onlyHigh, show, router]);
 
-  return null; // компонент-«невидимка»
+  return null;
 }
